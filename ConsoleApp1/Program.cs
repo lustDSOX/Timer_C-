@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -11,16 +12,23 @@ namespace ConsoleApp1
     internal class Program
     {
         static DateTime time;
-        static DateTime timer = new DateTime();
+        static TimeSpan timer;
         static ManualResetEvent _event;
-        static Thread tClock = new Thread(Clock);
-        
+        static ManualResetEvent _watch;
+        static Stopwatch stopWatch = new Stopwatch();
         static void Main(string[] args)
         {
             _event = new ManualResetEvent(true);
+            _watch = new ManualResetEvent(true);
             WriteLine("Список команд - help");
+            Thread tClock = new Thread(Clock);
             tClock.Start();
+            Thread tWather = new Thread(StopWather);
             _event.Reset();
+            _watch.Reset();
+            tWather.Start();
+            
+
             while (true)
             {
                 switch (ReadLine())
@@ -29,29 +37,46 @@ namespace ConsoleApp1
                         PrintHelp();
                         break;
                     case "1":
-                        SetCursorPosition(0, 2);
-                        WriteLine("         ");
-                        SetCursorPosition(0, 2);
+                        Clear();
+                        WriteLine("Список команд - help");
                         _event.Reset();
                         break;
                     case "2":
+                        Clear();
+                        WriteLine("Список команд - help");
                         _event.Set();
                         break;
                     case "3":
                         break;
                     case "4":
+                        _event.Reset();
+                        _watch.Reset();
+                        SetCursorPosition(0, 1);
+                        WriteLine("Введите кол-во секунд");
+                        int n = int.Parse(ReadLine());
+                        Clear();
+                        WriteLine("Список команд - help");
+                        Thread tTimer = new Thread(Timer);
+                        tTimer.Start(n);
                         break;
                     case "5":
-                        SetCursorPosition(0, 2);
-                        WriteLine("         ");
-                        SetCursorPosition(0, 2);
                         _event.Reset();
-                        Thread tWather = new Thread(StopWather);
-                        Thread tTimer = new Thread(UpdateTimer);
-                        tWather.Start();
-                        tTimer.Start();
+                        Clear();
+                        WriteLine("Список команд - help");
+                        _watch.Set();
+                        stopWatch.Start();
                         break;
                     case "6":
+                        stopWatch.Stop();
+                        _watch.Reset();
+                        Clear();
+                        WriteLine("Список команд - help");
+                        break;
+                    case "7":
+                        _watch.Reset();
+                        stopWatch.Reset();
+                        Clear();
+                        WriteLine("Список команд - help");
                         break;
                     case "0":
                         return;
@@ -61,23 +86,33 @@ namespace ConsoleApp1
 
         static void StopWather()
         {
-            while(true)
-            {
-                SetCursorPosition(0, 1);
-                WriteLine(timer.ToString("mm:ss:ff"));
-               // Thread.Sleep(1);
-            }
-
-        }
-
-        static void UpdateTimer()
-        {
             while (true)
             {
-                timer = timer.AddMilliseconds(1);
+                _watch.WaitOne();
+                timer = stopWatch.Elapsed;
+                SetCursorPosition(0, 1);
+                WriteLine(timer.ToString(@"mm\:ss\:ff"));
                 Thread.Sleep(1);
             }
+
         }
+
+        static void Timer(object n)
+        {
+            if(n is int trigger)
+            {
+                DateTime span = new DateTime();
+                for (int i = 0; i < trigger; i++)
+                {
+                    span = span.AddSeconds(1);
+                    SetCursorPosition(0, 1);
+                    WriteLine(span.ToString("mm:ss"));
+                    Thread.Sleep(1000);
+                }
+                WriteLine("Время вышло");
+            }
+        }
+
         static void Clock()
         {
             while (true)
@@ -101,6 +136,7 @@ namespace ConsoleApp1
                 "4 - таймер\n" +
                 "5 - запустить секундомер\n" +
                 "6 - остановить секундомер\n" +
+                "7 - выключить секундомер\n" +
                 "0 - выход");
         }
     }
